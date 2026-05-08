@@ -1,3 +1,29 @@
+from fastapi import Request
+from fastapi.middleware.cors import CORSMiddleware
+# Enable CORS for local development (optional, but helps with fetch in some setups)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"] ,
+    allow_headers=["*"],
+)
+
+# Unregister endpoint
+from pydantic import BaseModel
+
+class UnregisterRequest(BaseModel):
+    email: str
+
+@app.post("/activities/{activity_name}/unregister")
+def unregister_participant(activity_name: str, req: UnregisterRequest):
+    if activity_name not in activities:
+        raise HTTPException(status_code=404, detail="Activity not found")
+    activity = activities[activity_name]
+    if req.email not in activity["participants"]:
+        raise HTTPException(status_code=404, detail="Participant not found")
+    activity["participants"].remove(req.email)
+    return {"message": f"Removed {req.email} from {activity_name}"}
 """
 High School Management System API
 

@@ -20,14 +20,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const spotsLeft = details.max_participants - details.participants.length;
 
-        // Crear lista de participantes
+        // Crear lista de participantes con icono de eliminar
         let participantsHTML = '';
         if (details.participants && details.participants.length > 0) {
           participantsHTML = `
             <div class="participants-section">
               <strong>Participantes:</strong>
               <ul class="participants-list">
-                ${details.participants.map(p => `<li>${p}</li>`).join('')}
+                ${details.participants.map(p => `
+                  <li class="participant-item">
+                    <span class="participant-email">${p}</span>
+                    <span class="delete-participant" title="Eliminar" data-activity="${name}" data-email="${p}">&#128465;</span>
+                  </li>
+                `).join('')}
               </ul>
             </div>
           `;
@@ -56,6 +61,31 @@ document.addEventListener("DOMContentLoaded", () => {
         option.textContent = name;
         activitySelect.appendChild(option);
       });
+
+      // Add event listeners for delete icons
+      document.querySelectorAll('.delete-participant').forEach(icon => {
+        icon.addEventListener('click', async (e) => {
+          const activity = e.target.getAttribute('data-activity');
+          const email = e.target.getAttribute('data-email');
+          if (confirm(`¿Eliminar a ${email} de ${activity}?`)) {
+            try {
+              const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+              });
+              if (!response.ok) {
+                const data = await response.json();
+                alert(data.detail || 'Error al eliminar participante');
+              } else {
+                fetchActivities();
+              }
+            } catch (err) {
+              alert('Error de red al eliminar participante');
+            }
+          }
+        });
+      });
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
@@ -83,6 +113,8 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        // Actualizar la lista de actividades automáticamente
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
